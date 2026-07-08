@@ -73,3 +73,41 @@ describe("submitPrompt", () => {
     expect(clicked).toBe(true);
   });
 });
+
+describe("insertText into question textarea", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("should return false when question textarea not found", () => {
+    expect(insertText("hello", "question")).toBe(false);
+  });
+
+  it("should insert text into textarea at cursor position", () => {
+    const textarea = document.createElement("textarea");
+    textarea.setAttribute("data-slot", "question-custom-input");
+    textarea.value = "hello world";
+    textarea.selectionStart = 6;
+    textarea.selectionEnd = 11;
+    document.body.appendChild(textarea);
+
+    const result = insertText("there", "question");
+    expect(result).toBe(true);
+    expect(textarea.value).toBe("hello there");
+    expect(textarea.selectionStart).toBe(11);
+  });
+
+  it("should dispatch input event", () => {
+    let eventCount = 0;
+    const textarea = document.createElement("textarea");
+    textarea.setAttribute("data-slot", "question-custom-input");
+    textarea.value = "";
+    textarea.addEventListener("input", () => {
+      eventCount++;
+    });
+    document.body.appendChild(textarea);
+
+    insertText("test", "question");
+    expect(eventCount).toBeGreaterThanOrEqual(1);
+  });
+});
