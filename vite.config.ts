@@ -18,9 +18,9 @@ export default defineConfig({
         "run-at": "document-idle",
         icon: "https://raw.githubusercontent.com/slaid098/opencode-voice-dictation/main/assets/icon.png",
         updateURL:
-          "https://raw.githubusercontent.com/slaid098/opencode-voice-dictation/main/dist/opencode-voice-dictation.user.js",
+          "https://raw.githubusercontent.com/slaid098/opencode-voice-dictation/dist/opencode-voice-dictation.meta.js",
         downloadURL:
-          "https://raw.githubusercontent.com/slaid098/opencode-voice-dictation/main/dist/opencode-voice-dictation.user.js",
+          "https://raw.githubusercontent.com/slaid098/opencode-voice-dictation/dist/opencode-voice-dictation.user.js",
       },
       build: {
         fileName: "opencode-voice-dictation.user.js",

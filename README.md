@@ -45,18 +45,30 @@ Voice dictation for [OpenCode](https://opencode.ai) web interface using OpenAI W
 
 ### Install
 
+> **One-click install**: Open this link in your browser with Violentmonkey/Tampermonkey installed:
+> 
+> **[Install Script](https://raw.githubusercontent.com/slaid098/opencode-voice-dictation/dist/opencode-voice-dictation.user.js)**
+> 
+> Your userscript manager will intercept the download and show an installation dialog.
+
 #### Desktop (Vivaldi + Violentmonkey)
 
 1. Install [Violentmonkey](https://violentmonkey.github.io/) extension in Vivaldi
-2. Open Violentmonkey dashboard → **+** → **Create new script**
-3. Paste the contents of `dist/opencode-voice-dictation.user.js`
-4. Save (Ctrl+S)
+2. Click the [Install Script](https://raw.githubusercontent.com/slaid098/opencode-voice-dictation/dist/opencode-voice-dictation.user.js) link
+3. Confirm installation in the Violentmonkey dialog
 
 #### Android (Firefox + Tampermonkey)
 
 1. Install [Firefox for Android](https://play.google.com/store/apps/details?id=org.mozilla.firefox) from Play Store
 2. Install [Tampermonkey](https://addons.mozilla.org/en-US/android/addon/tampermonkey/) from Firefox Add-ons
-3. Open Tampermonkey dashboard → **+** → paste the script → Save
+3. In Firefox, open the [Install Script](https://raw.githubusercontent.com/slaid098/opencode-voice-dictation/dist/opencode-voice-dictation.user.js) link
+4. Confirm installation in the Tampermonkey dialog
+
+#### Manual install (from GitHub Releases)
+
+1. Go to [Releases](https://github.com/slaid098/opencode-voice-dictation/releases)
+2. Download `opencode-voice-dictation.user.js` from the latest release
+3. Open Violentmonkey/Tampermonkey dashboard → **+** → paste the file contents → Save
 
 ### Setup
 
@@ -64,6 +76,15 @@ Voice dictation for [OpenCode](https://opencode.ai) web interface using OpenAI W
 2. Open any OpenCode web page
 3. Open Violentmonkey/Tampermonkey menu → **"Set Groq API Key"**
 4. Paste your key (`gsk_...`)
+
+### Auto-Update
+
+The script updates automatically. No action needed.
+
+- `@updateURL` checks for new versions periodically (every 24h in Tampermonkey, every 7 days in Violentmonkey)
+- Only a tiny `.meta.js` (~1KB) is downloaded to check the version
+- If a new version is found, the full `.user.js` (~18KB) is downloaded and installed
+- Updates are published automatically by CI when code is pushed to `main`
 
 ### Usage
 
@@ -123,18 +144,30 @@ All settings available via the Violentmonkey/Tampermonkey menu:
 
 ### Установка
 
+> **Установка в один клик**: Откройте эту ссылку в браузере с установленным Violentmonkey/Tampermonkey:
+> 
+> **[Установить скрипт](https://raw.githubusercontent.com/slaid098/opencode-voice-dictation/dist/opencode-voice-dictation.user.js)**
+> 
+> Менеджер скриптов перехватит загрузку и покажет диалог установки.
+
 #### ПК (Vivaldi + Violentmonkey)
 
 1. Установите расширение [Violentmonkey](https://violentmonkey.github.io/) в Vivaldi
-2. Откройте панель Violentmonkey → **+** → **Создать новый скрипт**
-3. Вставьте содержимое `dist/opencode-voice-dictation.user.js`
-4. Сохраните (Ctrl+S)
+2. Нажмите на ссылку [Установить скрипт](https://raw.githubusercontent.com/slaid098/opencode-voice-dictation/dist/opencode-voice-dictation.user.js)
+3. Подтвердите установку в диалоге Violentmonkey
 
 #### Android (Firefox + Tampermonkey)
 
 1. Установите [Firefox для Android](https://play.google.com/store/apps/details?id=org.mozilla.firefox) из Play Store
 2. Установите [Tampermonkey](https://addons.mozilla.org/ru/android/addon/tampermonkey/) из дополнений Firefox
-3. Откройте панель Tampermonkey → **+** → вставьте скрипт → Сохранить
+3. В Firefox откройте ссылку [Установить скрипт](https://raw.githubusercontent.com/slaid098/opencode-voice-dictation/dist/opencode-voice-dictation.user.js)
+4. Подтвердите установку в диалоге Tampermonkey
+
+#### Ручная установка (из GitHub Releases)
+
+1. Перейдите на страницу [Releases](https://github.com/slaid098/opencode-voice-dictation/releases)
+2. Скачайте `opencode-voice-dictation.user.js` из последнего релиза
+3. Откройте панель Violentmonkey/Tampermonkey → **+** → вставьте содержимое файла → Сохранить
 
 ### Настройка
 
@@ -142,6 +175,15 @@ All settings available via the Violentmonkey/Tampermonkey menu:
 2. Откройте любую страницу OpenCode web
 3. Откройте меню Violentmonkey/Tampermonkey → **"Set Groq API Key"**
 4. Вставьте ваш ключ (`gsk_...`)
+
+### Автообновление
+
+Скрипт обновляется автоматически. Ничего делать не нужно.
+
+- `@updateURL` периодически проверяет новые версии (каждые 24ч в Tampermonkey, каждые 7 дней в Violentmonkey)
+- Скачивается только маленький `.meta.js` (~1KB) для проверки версии
+- Если найдена новая версия — скачивается полный `.user.js` (~18KB) и устанавливается
+- Обновления публикуются автоматически CI при пуше в `main`
 
 ### Использование
 
