@@ -108,7 +108,6 @@ async function cancelRecording(): Promise<void> {
   elapsedSeconds = 0;
   recorder = null;
   ui?.updateState(currentState);
-  ui?.toast("Recording cancelled");
 }
 
 function promptForApiKey(): void {
