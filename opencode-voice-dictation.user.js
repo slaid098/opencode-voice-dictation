@@ -316,15 +316,15 @@
       height: 28px;
       border-radius: 50%;
       border: none;
-      background: rgba(128, 128, 128, 0.2);
-      color: var(--color-text-secondary, #aaa);
+      background: rgba(128, 128, 128, 0.5);
+      color: #fff;
       cursor: pointer;
       transition: all 0.2s ease;
       padding: 0;
       flex-shrink: 0;
     }
     .${CANCEL_CLASS}:hover {
-      background: rgba(128, 128, 128, 0.4);
+      background: rgba(128, 128, 128, 0.7);
       color: #fff;
     }
     .${CANCEL_CLASS}.visible {
@@ -633,7 +633,6 @@
     elapsedSeconds = 0;
     recorder = null;
     ui == null ? void 0 : ui.updateState(currentState);
-    ui == null ? void 0 : ui.toast("Recording cancelled");
   }
   function promptForApiKey() {
     const key = prompt("Enter your Groq API key (get one free at console.groq.com/keys):", "");
