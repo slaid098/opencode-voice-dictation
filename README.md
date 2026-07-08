@@ -8,7 +8,7 @@
 
 ## Русский
 
-Голосовая диктовка для [OpenCode](https://opencode.ai) web через Whisper (Groq API). Качество как в Cursor. Работает на ПК и телефоне.
+Голосовая диктовка для [OpenCode](https://opencode.ai) web через Whisper (Groq API). Работает на ПК и телефоне.
 
 ### Установка
 
@@ -35,10 +35,13 @@
 
 ### Использование
 
-1. Нажми кнопку микрофона в правом верхнем углу поля ввода
-2. Говори (виден таймер записи)
-3. Нажми снова — текст появится в поле ввода
-4. На ПК: **Ctrl+Space** — горячая клавиша
+1. Нажми кнопку микрофона 🎤 в правом верхнем углу поля ввода
+2. Говори — виден таймер записи и кнопка отмены
+3. Нажми ⏹ — запись остановится, текст вставится в поле ввода
+4. Или нажми ✕ — запись отменится, текст не вставляется
+5. На ПК: **Ctrl+Space** — горячая клавиша
+
+Микрофон также доступен в поле ответа на вопросы OpenCode (когда выбираешь "ввести свой ответ").
 
 ### Автообновление
 
@@ -58,7 +61,7 @@
 
 ## English
 
-Voice dictation for [OpenCode](https://opencode.ai) web via Whisper (Groq API). Cursor-quality transcription. Works on desktop and mobile.
+Voice dictation for [OpenCode](https://opencode.ai) web via Whisper (Groq API). Works on desktop and mobile.
 
 ### Install
 
@@ -85,10 +88,13 @@ Or download from [Releases](https://github.com/slaid098/opencode-voice-dictation
 
 ### Usage
 
-1. Click the mic button in the top-right corner of the input area
-2. Speak (recording timer is displayed)
-3. Click again — transcribed text appears in the input
-4. Desktop: **Ctrl+Space** shortcut
+1. Click the mic button 🎤 in the top-right corner of the input area
+2. Speak — recording timer and cancel button are displayed
+3. Click ⏹ — recording stops, transcribed text is inserted into the input
+4. Or click ✕ — recording is cancelled, no text inserted
+5. Desktop: **Ctrl+Space** shortcut
+
+The mic button is also available in OpenCode question prompt answer fields (when choosing "type your own answer").
 
 ### Auto-Update
 
