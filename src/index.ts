@@ -1,4 +1,4 @@
-import { type AudioRecorder, createAudioRecorder, formatTime } from "./audio.js";
+import { type AudioRecorder, createAudioRecorder } from "./audio.js";
 import {
   getConfig,
   isFirstRun,
@@ -6,7 +6,7 @@ import {
   setConfig,
   validateApiKey,
 } from "./config.js";
-import { insertText, isOpencodePage, submitPrompt } from "./insert.js";
+import { type InsertTarget, insertText, isOpencodePage, submitPrompt } from "./insert.js";
 import { setupKeyboardShortcut } from "./keyboard.js";
 import { transcribe } from "./transcribe.js";
 import type { DictationState } from "./types.js";
@@ -17,10 +17,7 @@ let currentState: DictationState = "idle";
 let timerInterval: ReturnType<typeof setInterval> | null = null;
 let elapsedSeconds = 0;
 let ui: ReturnType<typeof setupUI> | null = null;
-
-function getState(): DictationState {
-  return currentState;
-}
+let currentTarget: InsertTarget = "composer";
 
 function startTimer(): void {
   elapsedSeconds = 0;
@@ -37,7 +34,8 @@ function stopTimer(): void {
   }
 }
 
-async function toggleDictation(): Promise<void> {
+async function toggleDictation(target: InsertTarget): Promise<void> {
+  currentTarget = target;
   if (currentState === "idle") {
     await startRecording();
   } else if (currentState === "recording") {
@@ -75,10 +73,10 @@ async function stopAndTranscribe(): Promise<void> {
     const result = await transcribe(audioBlob, config);
 
     if (result.text) {
-      const inserted = insertText(result.text);
+      const inserted = insertText(result.text, currentTarget);
       if (!inserted) {
         ui?.toast("Could not find input field", true);
-      } else if (config.autoSubmit) {
+      } else if (config.autoSubmit && currentTarget === "composer") {
         submitPrompt();
       }
     }
@@ -91,6 +89,26 @@ async function stopAndTranscribe(): Promise<void> {
     recorder = null;
     ui?.updateState(currentState);
   }
+}
+
+async function cancelRecording(): Promise<void> {
+  if (currentState !== "recording" || !recorder) {
+    return;
+  }
+
+  stopTimer();
+
+  try {
+    await recorder.stop();
+  } catch {
+    // discard audio
+  }
+
+  currentState = "idle";
+  elapsedSeconds = 0;
+  recorder = null;
+  ui?.updateState(currentState);
+  ui?.toast("Recording cancelled");
 }
 
 function promptForApiKey(): void {
@@ -155,10 +173,17 @@ function init(): void {
     return;
   }
 
-  ui = setupUI(toggleDictation, getState);
+  ui = setupUI({
+    onToggle: (target: InsertTarget) => {
+      void toggleDictation(target);
+    },
+    onCancel: () => {
+      void cancelRecording();
+    },
+  });
 
   setupKeyboardShortcut(() => {
-    void toggleDictation();
+    void toggleDictation("composer");
   });
 
   registerMenuCommands({
