@@ -111,10 +111,17 @@
   }
   const PROMPT_INPUT_SELECTOR = '[data-component="prompt-input"]';
   const SUBMIT_SELECTOR = '[data-action="prompt-submit"]';
+  const QUESTION_INPUT_SELECTOR$1 = '[data-slot="question-custom-input"]';
   function isOpencodePage() {
     return document.querySelector(PROMPT_INPUT_SELECTOR) !== null;
   }
-  function insertText(text) {
+  function insertText(text, target = "composer") {
+    if (target === "question") {
+      return insertIntoTextarea(text);
+    }
+    return insertIntoContenteditable(text);
+  }
+  function insertIntoContenteditable(text) {
     const input = document.querySelector(PROMPT_INPUT_SELECTOR);
     if (!input) {
       return false;
@@ -127,6 +134,20 @@
     }
     document.execCommand("insertText", false, text);
     input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    return true;
+  }
+  function insertIntoTextarea(text) {
+    const textarea = document.querySelector(QUESTION_INPUT_SELECTOR$1);
+    if (!textarea) {
+      return false;
+    }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const newValue = textarea.value.substring(0, start) + text + textarea.value.substring(end);
+    textarea.value = newValue;
+    textarea.selectionStart = textarea.selectionEnd = start + text.length;
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    textarea.focus();
     return true;
   }
   function submitPrompt() {
@@ -229,19 +250,22 @@
       });
     });
   }
-  const BUTTON_ID = "opencode-voice-dictation-btn";
-  const CONTAINER_ID = "opencode-voice-dictation-container";
-  const TIMER_ID = "opencode-voice-dictation-timer";
+  const BUTTON_CLASS = "ocvd-btn";
+  const CONTAINER_CLASS = "ocvd-container";
+  const TIMER_CLASS = "ocvd-timer";
+  const CANCEL_CLASS = "ocvd-cancel";
   const COMPOSER_SELECTORS = [
     '[data-component="session-composer"]',
     '[data-component="session-new-composer"]'
   ];
+  const QUESTION_INPUT_SELECTOR = '[data-slot="question-custom-input"]';
   const ICON_MIC = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>`;
   const ICON_STOP = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="3"/></svg>`;
+  const ICON_CANCEL = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18.3 5.71L12 12l6.3 6.29-1.42 1.42L10.58 13.4 4.29 19.71 2.87 18.3 9.16 12 2.87 5.71 4.29 4.29 10.58 10.58l6.29-6.29z"/></svg>`;
   const ICON_SPINNER = `<svg class="ocvd-spin" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8z"/></svg>`;
   function createButtonStyle() {
     return `
-    #${CONTAINER_ID} {
+    .${CONTAINER_CLASS} {
       position: absolute !important;
       top: 8px;
       right: 8px;
@@ -251,10 +275,10 @@
       gap: 6px;
       pointer-events: none;
     }
-    #${CONTAINER_ID} > * {
+    .${CONTAINER_CLASS} > * {
       pointer-events: auto;
     }
-    #${BUTTON_ID} {
+    .${BUTTON_CLASS} {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -269,43 +293,65 @@
       padding: 0;
       flex-shrink: 0;
     }
-    #${BUTTON_ID}:hover {
+    .${BUTTON_CLASS}:hover {
       background: var(--color-bg-hover, rgba(128, 128, 128, 0.25));
       color: var(--color-text-primary, #fff);
     }
-    #${BUTTON_ID}.recording {
+    .${BUTTON_CLASS}.recording {
       background: #e53935;
       color: #fff;
       animation: ocvd-pulse 1.5s ease-in-out infinite;
     }
-    #${BUTTON_ID}.processing {
+    .${BUTTON_CLASS}.processing {
       background: var(--color-accent, #4a9eff);
       color: #fff;
       pointer-events: none;
       opacity: 0.8;
     }
-    #${TIMER_ID} {
+    .${CANCEL_CLASS} {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(128, 128, 128, 0.2);
+      color: var(--color-text-secondary, #aaa);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      padding: 0;
+      flex-shrink: 0;
+    }
+    .${CANCEL_CLASS}:hover {
+      background: rgba(128, 128, 128, 0.4);
+      color: #fff;
+    }
+    .${CANCEL_CLASS}.visible {
+      display: flex;
+    }
+    .${TIMER_CLASS} {
       display: none;
       font-family: monospace;
       font-size: 13px;
       font-weight: 600;
-      color: #e53935;
-      background: rgba(229, 57, 53, 0.1);
-      padding: 3px 10px;
+      color: #fff;
+      background: #e53935;
+      padding: 4px 10px;
       border-radius: 12px;
       align-items: center;
       gap: 5px;
       line-height: 1;
       white-space: nowrap;
     }
-    #${TIMER_ID}.visible {
+    .${TIMER_CLASS}.visible {
       display: inline-flex;
     }
-    #${TIMER_ID}::before {
+    .${TIMER_CLASS}::before {
       content: "";
       width: 7px;
       height: 7px;
-      background: #e53935;
+      background: #fff;
       border-radius: 50%;
       animation: ocvd-blink 1s ease-in-out infinite;
       flex-shrink: 0;
@@ -374,47 +420,62 @@
       toast.className = "";
     }, 4e3);
   }
-  function createContainer() {
-    const container = document.createElement("div");
-    container.id = CONTAINER_ID;
-    const timer = document.createElement("span");
-    timer.id = TIMER_ID;
-    timer.textContent = "00:00";
-    const button = document.createElement("button");
-    button.id = BUTTON_ID;
-    button.type = "button";
-    button.title = "Voice Dictation (Ctrl+Space)";
-    button.innerHTML = ICON_MIC;
-    container.appendChild(timer);
-    container.appendChild(button);
-    return container;
-  }
-  function updateButtonState(button, timer, state, elapsedSeconds2 = 0) {
-    button.classList.remove("recording", "processing");
-    timer.classList.remove("visible");
-    switch (state) {
-      case "idle":
-        button.innerHTML = ICON_MIC;
-        button.title = "Voice Dictation (Ctrl+Space)";
-        break;
-      case "recording":
-        button.classList.add("recording");
-        button.innerHTML = ICON_STOP;
-        button.title = "Stop recording";
-        timer.textContent = formatTimer(elapsedSeconds2);
-        timer.classList.add("visible");
-        break;
-      case "processing":
-        button.classList.add("processing");
-        button.innerHTML = ICON_SPINNER;
-        button.title = "Transcribing...";
-        break;
-    }
-  }
   function formatTimer(seconds) {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }
+  function createContainer() {
+    const container = document.createElement("div");
+    container.className = CONTAINER_CLASS;
+    const cancel = document.createElement("button");
+    cancel.className = CANCEL_CLASS;
+    cancel.type = "button";
+    cancel.title = "Cancel recording";
+    cancel.innerHTML = ICON_CANCEL;
+    const timer = document.createElement("span");
+    timer.className = TIMER_CLASS;
+    timer.textContent = "00:00";
+    const button = document.createElement("button");
+    button.className = BUTTON_CLASS;
+    button.type = "button";
+    button.title = "Voice Dictation (Ctrl+Space)";
+    button.innerHTML = ICON_MIC;
+    container.appendChild(cancel);
+    container.appendChild(timer);
+    container.appendChild(button);
+    return container;
+  }
+  function updateAllButtonStates(state, elapsedSeconds2 = 0) {
+    const containers = document.querySelectorAll(`.${CONTAINER_CLASS}`);
+    for (const container of containers) {
+      const button = container.querySelector(`.${BUTTON_CLASS}`);
+      const timer = container.querySelector(`.${TIMER_CLASS}`);
+      const cancel = container.querySelector(`.${CANCEL_CLASS}`);
+      if (!button || !timer || !cancel) continue;
+      button.classList.remove("recording", "processing");
+      timer.classList.remove("visible");
+      cancel.classList.remove("visible");
+      switch (state) {
+        case "idle":
+          button.innerHTML = ICON_MIC;
+          button.title = "Voice Dictation (Ctrl+Space)";
+          break;
+        case "recording":
+          button.classList.add("recording");
+          button.innerHTML = ICON_STOP;
+          button.title = "Stop recording";
+          timer.textContent = formatTimer(elapsedSeconds2);
+          timer.classList.add("visible");
+          cancel.classList.add("visible");
+          break;
+        case "processing":
+          button.classList.add("processing");
+          button.innerHTML = ICON_SPINNER;
+          button.title = "Transcribing...";
+          break;
+      }
+    }
   }
   function findComposer() {
     for (const selector of COMPOSER_SELECTORS) {
@@ -425,48 +486,67 @@
     }
     return null;
   }
-  function isContainerInjected() {
-    return document.getElementById(CONTAINER_ID) !== null;
-  }
-  function injectButton(onToggle) {
-    if (isContainerInjected()) {
-      return;
+  function ensureRelative(el) {
+    if (window.getComputedStyle(el).position === "static") {
+      el.style.position = "relative";
     }
-    const composer = findComposer();
-    if (!composer) {
-      return;
+  }
+  function injectIntoElement(parent, onToggle, onCancel, target) {
+    const existing = parent.querySelector(`.${CONTAINER_CLASS}`);
+    if (existing) {
+      return null;
     }
     injectStyles();
-    const computedPosition = window.getComputedStyle(composer).position;
-    if (computedPosition === "static") {
-      composer.style.position = "relative";
-    }
+    ensureRelative(parent);
     const container = createContainer();
-    const button = container.querySelector(`#${BUTTON_ID}`);
+    const button = container.querySelector(`.${BUTTON_CLASS}`);
     button.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      onToggle();
+      onToggle(target);
     });
-    composer.appendChild(container);
+    const cancel = container.querySelector(`.${CANCEL_CLASS}`);
+    cancel.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onCancel();
+    });
+    parent.appendChild(container);
+    return container;
   }
-  function setupUI(onToggle, _getState) {
+  function injectIntoComposer(onToggle, onCancel) {
+    const composer = findComposer();
+    if (composer) {
+      injectIntoElement(composer, onToggle, onCancel, "composer");
+    }
+  }
+  function injectIntoQuestionPrompts(onToggle, onCancel) {
+    const textareas = document.querySelectorAll(QUESTION_INPUT_SELECTOR);
+    for (const textarea of textareas) {
+      const parent = textarea.parentElement;
+      if (parent) {
+        injectIntoElement(parent, onToggle, onCancel, "question");
+      }
+    }
+  }
+  function setupUI(callbacks) {
     const observer = new MutationObserver(() => {
-      injectButton(onToggle);
+      injectIntoComposer(callbacks.onToggle, callbacks.onCancel);
+      injectIntoQuestionPrompts(callbacks.onToggle, callbacks.onCancel);
     });
     observer.observe(document.body, {
       childList: true,
       subtree: true
     });
-    injectButton(onToggle);
+    injectIntoComposer(callbacks.onToggle, callbacks.onCancel);
+    injectIntoQuestionPrompts(callbacks.onToggle, callbacks.onCancel);
     return {
-      inject: () => injectButton(onToggle),
+      inject: () => {
+        injectIntoComposer(callbacks.onToggle, callbacks.onCancel);
+        injectIntoQuestionPrompts(callbacks.onToggle, callbacks.onCancel);
+      },
       updateState: (state, elapsedSeconds2 = 0) => {
-        const button = document.getElementById(BUTTON_ID);
-        const timer = document.getElementById(TIMER_ID);
-        if (button && timer) {
-          updateButtonState(button, timer, state, elapsedSeconds2);
-        }
+        updateAllButtonStates(state, elapsedSeconds2);
       },
       toast: showToast
     };
@@ -476,6 +556,7 @@
   let timerInterval = null;
   let elapsedSeconds = 0;
   let ui = null;
+  let currentTarget = "composer";
   function startTimer() {
     elapsedSeconds = 0;
     timerInterval = setInterval(() => {
@@ -489,7 +570,8 @@
       timerInterval = null;
     }
   }
-  async function toggleDictation() {
+  async function toggleDictation(target) {
+    currentTarget = target;
     if (currentState === "idle") {
       await startRecording();
     } else if (currentState === "recording") {
@@ -521,10 +603,10 @@
       const config = getConfig();
       const result = await transcribe(audioBlob, config);
       if (result.text) {
-        const inserted = insertText(result.text);
+        const inserted = insertText(result.text, currentTarget);
         if (!inserted) {
           ui == null ? void 0 : ui.toast("Could not find input field", true);
-        } else if (config.autoSubmit) {
+        } else if (config.autoSubmit && currentTarget === "composer") {
           submitPrompt();
         }
       }
@@ -537,6 +619,21 @@
       recorder = null;
       ui == null ? void 0 : ui.updateState(currentState);
     }
+  }
+  async function cancelRecording() {
+    if (currentState !== "recording" || !recorder) {
+      return;
+    }
+    stopTimer();
+    try {
+      await recorder.stop();
+    } catch {
+    }
+    currentState = "idle";
+    elapsedSeconds = 0;
+    recorder = null;
+    ui == null ? void 0 : ui.updateState(currentState);
+    ui == null ? void 0 : ui.toast("Recording cancelled");
   }
   function promptForApiKey() {
     const key = prompt("Enter your Groq API key (get one free at console.groq.com/keys):", "");
@@ -593,9 +690,16 @@
       setTimeout(init, 1500);
       return;
     }
-    ui = setupUI(toggleDictation);
+    ui = setupUI({
+      onToggle: (target) => {
+        void toggleDictation(target);
+      },
+      onCancel: () => {
+        void cancelRecording();
+      }
+    });
     setupKeyboardShortcut(() => {
-      void toggleDictation();
+      void toggleDictation("composer");
     });
     registerMenuCommands({
       onSetKey: promptForApiKey,
