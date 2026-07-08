@@ -366,7 +366,7 @@
     }
     @keyframes ocvd-spin {
       from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+      to { transform: rotate(-360deg); }
     }
     .ocvd-spin {
       animation: ocvd-spin 0.8s linear infinite;
