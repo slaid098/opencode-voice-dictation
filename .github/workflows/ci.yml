@@ -17,8 +17,7 @@ jobs:
           node-version: "22"
           cache: "npm"
 
-      - name: Install
-        run: npm ci
+      - run: npm ci
 
       - name: Lint (Biome)
         run: npm run lint
@@ -31,13 +30,3 @@ jobs:
 
       - name: Test (Vitest + Coverage)
         run: npm run test
-
-      - name: Build (Vite → .user.js)
-        run: npm run build
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        if: github.event_name == 'push'
-        with:
-          name: opencode-voice-dictation-user-js
-          path: dist/*.user.js
