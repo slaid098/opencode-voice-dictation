@@ -115,6 +115,9 @@
   function isOpencodePage() {
     return document.querySelector(PROMPT_INPUT_SELECTOR) !== null;
   }
+  function isQuestionPromptOpen() {
+    return document.querySelector(QUESTION_INPUT_SELECTOR$1) !== null;
+  }
   function insertText(text, target = "composer") {
     if (target === "question") {
       return insertIntoTextarea(text);
@@ -262,7 +265,7 @@
   const ICON_MIC = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>`;
   const ICON_STOP = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="3"/></svg>`;
   const ICON_CANCEL = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18.3 5.71L12 12l6.3 6.29-1.42 1.42L10.58 13.4 4.29 19.71 2.87 18.3 9.16 12 2.87 5.71 4.29 4.29 10.58 10.58l6.29-6.29z"/></svg>`;
-  const ICON_SPINNER = `<svg class="ocvd-spin" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8z"/></svg>`;
+  const ICON_SPINNER = `<svg class="ocvd-spin" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 4V1L16 5l-4 4V6c-3.31 0-6 2.69-6 6 0 1.01.25 1.97.7 2.8L5.24 16.26C4.46 15.03 4 13.57 4 12c0-4.42 3.58-8 8-8z"/></svg>`;
   function createButtonStyle() {
     return `
     .${CONTAINER_CLASS} {
@@ -366,7 +369,7 @@
     }
     @keyframes ocvd-spin {
       from { transform: rotate(0deg); }
-      to { transform: rotate(-360deg); }
+      to { transform: rotate(360deg); }
     }
     .ocvd-spin {
       animation: ocvd-spin 0.8s linear infinite;
@@ -571,8 +574,8 @@
     }
   }
   async function toggleDictation(target) {
-    currentTarget = target;
     if (currentState === "idle") {
+      currentTarget = target;
       await startRecording();
     } else if (currentState === "recording") {
       await stopAndTranscribe();
@@ -698,7 +701,7 @@
       }
     });
     setupKeyboardShortcut(() => {
-      void toggleDictation("composer");
+      void toggleDictation(isQuestionPromptOpen() ? "question" : "composer");
     });
     registerMenuCommands({
       onSetKey: promptForApiKey,
