@@ -8,6 +8,10 @@ export function isOpencodePage(): boolean {
   return document.querySelector(PROMPT_INPUT_SELECTOR) !== null;
 }
 
+export function isQuestionPromptOpen(): boolean {
+  return document.querySelector(QUESTION_INPUT_SELECTOR) !== null;
+}
+
 export function insertText(text: string, target: InsertTarget = "composer"): boolean {
   if (target === "question") {
     return insertIntoTextarea(text);
