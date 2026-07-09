@@ -6,7 +6,13 @@ import {
   setConfig,
   validateApiKey,
 } from "./config.js";
-import { type InsertTarget, insertText, isOpencodePage, submitPrompt } from "./insert.js";
+import {
+  type InsertTarget,
+  insertText,
+  isOpencodePage,
+  isQuestionPromptOpen,
+  submitPrompt,
+} from "./insert.js";
 import { setupKeyboardShortcut } from "./keyboard.js";
 import { transcribe } from "./transcribe.js";
 import type { DictationState } from "./types.js";
@@ -35,8 +41,8 @@ function stopTimer(): void {
 }
 
 async function toggleDictation(target: InsertTarget): Promise<void> {
-  currentTarget = target;
   if (currentState === "idle") {
+    currentTarget = target;
     await startRecording();
   } else if (currentState === "recording") {
     await stopAndTranscribe();
@@ -182,7 +188,7 @@ function init(): void {
   });
 
   setupKeyboardShortcut(() => {
-    void toggleDictation("composer");
+    void toggleDictation(isQuestionPromptOpen() ? "question" : "composer");
   });
 
   registerMenuCommands({
