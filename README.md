@@ -10,6 +10,8 @@
 
 Голосовая диктовка для [OpenCode](https://opencode.ai) web через Whisper (Groq API). Работает на ПК и телефоне.
 
+> ⚠️ **Требуется новый интерфейс OpenCode.** В настройках OpenCode web включите «New UI» — в старом интерфейсе скрипт не работает.
+
 ### Установка
 
 > **[Установить скрипт](https://raw.githubusercontent.com/slaid098/opencode-voice-dictation/dist/opencode-voice-dictation.user.js)** — открой ссылку в браузере с Violentmonkey/Tampermonkey и подтверди установку.
@@ -62,6 +64,8 @@
 ## English
 
 Voice dictation for [OpenCode](https://opencode.ai) web via Whisper (Groq API). Works on desktop and mobile.
+
+> ⚠️ **Requires the new OpenCode UI.** In OpenCode web settings, enable "New UI" — the script does not work in the old interface.
 
 ### Install
 
