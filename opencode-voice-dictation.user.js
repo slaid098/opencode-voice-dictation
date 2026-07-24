@@ -258,8 +258,10 @@
   const TIMER_CLASS = "ocvd-timer";
   const CANCEL_CLASS = "ocvd-cancel";
   const COMPOSER_SELECTORS = [
-    '[data-component="session-composer"]',
-    '[data-component="session-new-composer"]'
+    '[data-component="prompt-input-v2"]',
+    '[data-component="session-prompt-dock"]',
+    '[data-component="session-new-composer"]',
+    '[data-component="session-composer"]'
   ];
   const QUESTION_INPUT_SELECTOR = '[data-slot="question-custom-input"]';
   const ICON_MIC = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>`;
