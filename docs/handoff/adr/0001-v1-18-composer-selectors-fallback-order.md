@@ -1,9 +1,12 @@
 # ADR 0001: COMPOSER_SELECTORS fallback order for OpenCode v1.18.x
 
-- **Status**: accepted
 - **Date**: 2026-07-24
 - **PR**: #29
 - **Issue**: #28
+
+## Статус
+
+Accepted.
 
 ## Контекст
 
