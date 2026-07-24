@@ -90,7 +90,7 @@ Issue: #28.
 
 ## ADR
 
-См. `docs/handoff/adr/0001-v1-18-composer-selectors-fallback-order.md`.
+См. `docs/handoff/adr/0001-pr-29-v1-18-composer-selectors-fallback-order.md`.
 
 ## Источники
 
