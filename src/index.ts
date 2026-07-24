@@ -174,9 +174,11 @@ function checkFirstRun(): void {
 
 function init(): void {
   if (!isOpencodePage()) {
+    console.log("[ocvd] OpenCode page not detected, retrying in 1.5s...");
     setTimeout(init, 1500);
     return;
   }
+  console.log("[ocvd] OpenCode page detected, setting up UI");
 
   ui = setupUI({
     onToggle: (target: InsertTarget) => {

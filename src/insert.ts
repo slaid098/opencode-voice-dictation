@@ -1,11 +1,19 @@
 const PROMPT_INPUT_SELECTOR = '[data-component="prompt-input"]';
 const SUBMIT_SELECTOR = '[data-action="prompt-submit"]';
 const QUESTION_INPUT_SELECTOR = '[data-slot="question-custom-input"]';
+const PAGE_DETECT_SELECTORS = [
+  '[data-component="prompt-input"]',
+  '[data-component="prompt-input-v2"]',
+  '[data-component="session-prompt-dock"]',
+  '[data-component="session-composer"]',
+  '[data-component="session-new-composer"]',
+  '[data-slot="question-custom-input"]',
+];
 
 export type InsertTarget = "composer" | "question";
 
 export function isOpencodePage(): boolean {
-  return document.querySelector(PROMPT_INPUT_SELECTOR) !== null;
+  return PAGE_DETECT_SELECTORS.some((s) => document.querySelector(s) !== null);
 }
 
 export function isQuestionPromptOpen(): boolean {
