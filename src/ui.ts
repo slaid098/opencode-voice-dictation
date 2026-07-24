@@ -251,9 +251,11 @@ function findComposer(): HTMLElement | null {
   for (const selector of COMPOSER_SELECTORS) {
     const el = document.querySelector<HTMLElement>(selector);
     if (el) {
+      console.log(`[ocvd] Composer found via ${selector}`);
       return el;
     }
   }
+  console.log("[ocvd] No composer found in DOM");
   return null;
 }
 
@@ -301,6 +303,7 @@ function injectIntoComposer(onToggle: (target: InsertTarget) => void, onCancel: 
   const composer = findComposer();
   if (composer) {
     injectIntoElement(composer, onToggle, onCancel, "composer");
+    console.log("[ocvd] Mic button injected into composer");
   }
 }
 
