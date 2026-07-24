@@ -6,8 +6,10 @@ const CONTAINER_CLASS = "ocvd-container";
 const TIMER_CLASS = "ocvd-timer";
 const CANCEL_CLASS = "ocvd-cancel";
 const COMPOSER_SELECTORS = [
-  '[data-component="session-composer"]',
+  '[data-component="prompt-input-v2"]',
+  '[data-component="session-prompt-dock"]',
   '[data-component="session-new-composer"]',
+  '[data-component="session-composer"]',
 ];
 const QUESTION_INPUT_SELECTOR = '[data-slot="question-custom-input"]';
 
