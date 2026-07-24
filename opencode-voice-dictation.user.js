@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenCode Voice Dictation
 // @namespace    https://github.com/slaid098/opencode-voice-dictation
-// @version      1.0.1
+// @version      1.0.2
 // @author       slaid098
 // @description  Voice dictation for OpenCode web using Whisper (Groq API) - works on PC and mobile
 // @icon         https://raw.githubusercontent.com/slaid098/opencode-voice-dictation/main/assets/icon.png
@@ -494,6 +494,9 @@
     for (const selector of COMPOSER_SELECTORS) {
       const el = document.querySelector(selector);
       if (el) {
+        if (el.getAttribute("data-component") === "session-prompt-dock" && el.querySelector('[data-component="session-question-dock"]')) {
+          continue;
+        }
         console.log(`[ocvd] Composer found via ${selector}`);
         return el;
       }
@@ -530,6 +533,9 @@
     return container;
   }
   function injectIntoComposer(onToggle, onCancel) {
+    if (document.querySelector('[data-slot="question-custom-input"]')) {
+      return;
+    }
     const composer = findComposer();
     if (composer) {
       injectIntoElement(composer, onToggle, onCancel, "composer");
