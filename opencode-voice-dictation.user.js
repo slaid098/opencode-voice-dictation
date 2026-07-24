@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenCode Voice Dictation
 // @namespace    https://github.com/slaid098/opencode-voice-dictation
-// @version      1.0.0
+// @version      1.0.1
 // @author       slaid098
 // @description  Voice dictation for OpenCode web using Whisper (Groq API) - works on PC and mobile
 // @icon         https://raw.githubusercontent.com/slaid098/opencode-voice-dictation/main/assets/icon.png
@@ -112,8 +112,16 @@
   const PROMPT_INPUT_SELECTOR = '[data-component="prompt-input"]';
   const SUBMIT_SELECTOR = '[data-action="prompt-submit"]';
   const QUESTION_INPUT_SELECTOR$1 = '[data-slot="question-custom-input"]';
+  const PAGE_DETECT_SELECTORS = [
+    '[data-component="prompt-input"]',
+    '[data-component="prompt-input-v2"]',
+    '[data-component="session-prompt-dock"]',
+    '[data-component="session-composer"]',
+    '[data-component="session-new-composer"]',
+    '[data-slot="question-custom-input"]'
+  ];
   function isOpencodePage() {
-    return document.querySelector(PROMPT_INPUT_SELECTOR) !== null;
+    return PAGE_DETECT_SELECTORS.some((s) => document.querySelector(s) !== null);
   }
   function isQuestionPromptOpen() {
     return document.querySelector(QUESTION_INPUT_SELECTOR$1) !== null;
@@ -486,9 +494,11 @@
     for (const selector of COMPOSER_SELECTORS) {
       const el = document.querySelector(selector);
       if (el) {
+        console.log(`[ocvd] Composer found via ${selector}`);
         return el;
       }
     }
+    console.log("[ocvd] No composer found in DOM");
     return null;
   }
   function ensureRelative(el) {
@@ -523,6 +533,7 @@
     const composer = findComposer();
     if (composer) {
       injectIntoElement(composer, onToggle, onCancel, "composer");
+      console.log("[ocvd] Mic button injected into composer");
     }
   }
   function injectIntoQuestionPrompts(onToggle, onCancel) {
@@ -691,9 +702,11 @@
   }
   function init() {
     if (!isOpencodePage()) {
+      console.log("[ocvd] OpenCode page not detected, retrying in 1.5s...");
       setTimeout(init, 1500);
       return;
     }
+    console.log("[ocvd] OpenCode page detected, setting up UI");
     ui = setupUI({
       onToggle: (target) => {
         void toggleDictation(target);

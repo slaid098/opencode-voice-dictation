@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenCode Voice Dictation
 // @namespace    https://github.com/slaid098/opencode-voice-dictation
-// @version      1.0.0
+// @version      1.0.1
 // @author       slaid098
 // @description  Voice dictation for OpenCode web using Whisper (Groq API) - works on PC and mobile
 // @icon         https://raw.githubusercontent.com/slaid098/opencode-voice-dictation/main/assets/icon.png
