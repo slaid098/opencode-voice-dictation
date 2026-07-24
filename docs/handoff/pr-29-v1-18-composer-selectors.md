@@ -1,5 +1,5 @@
 ---
-pr_number: <PR-NUMBER>
+pr_number: 29
 branch: fix/ui/v1-18-composer-selectors
 issue: 28
 title: support OpenCode 1.18.x composer selectors
@@ -7,7 +7,7 @@ status: open
 created: 2026-07-24
 ---
 
-# Handoff — PR #<PR-NUMBER>: v1.18.x composer selectors
+# Handoff — PR #29: v1.18.x composer selectors
 
 ## Контекст
 

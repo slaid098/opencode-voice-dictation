@@ -2,7 +2,7 @@
 
 - **Status**: accepted
 - **Date**: 2026-07-24
-- **PR**: #<PR-NUMBER>
+- **PR**: #29
 - **Issue**: #28
 
 ## Контекст
