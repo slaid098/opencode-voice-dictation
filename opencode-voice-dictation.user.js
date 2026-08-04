@@ -8,7 +8,7 @@
 // @downloadURL  https://raw.githubusercontent.com/slaid098/opencode-voice-dictation/dist/opencode-voice-dictation.user.js
 // @updateURL    https://raw.githubusercontent.com/slaid098/opencode-voice-dictation/dist/opencode-voice-dictation.meta.js
 // @match        *://*/*
-// @connect      api.groq.com
+// @connect      *
 // @grant        GM_getValue
 // @grant        GM_registerMenuCommand
 // @grant        GM_setValue
@@ -79,7 +79,9 @@
     groqApiKey: "",
     model: "whisper-large-v3",
     language: "",
-    whisperPrompt: "Software development discussion. Common terms: API, JSON, async, await, function, class, component, endpoint, deployment, refactoring, merge, commit, pull request, branch, repository, TypeScript, Python, Docker, Kubernetes, OpenCode, Whisper, Groq, contenteditable, SolidJS, Vite, Biome, Vitest, MutationObserver, FormData, MediaRecorder.",
+    whisperPrompt: "opencode, voice, dictation, transcribe, command, terminal, commit, branch, pull, push, merge, issue, prompt",
+    endpoint: "https://api.groq.com/openai/v1/audio/transcriptions",
+    temperature: 0,
     autoSubmit: false
   };
   function getConfig() {
@@ -88,6 +90,8 @@
       model: _GM_getValue("model", DEFAULTS.model),
       language: _GM_getValue("language", DEFAULTS.language),
       whisperPrompt: _GM_getValue("whisperPrompt", DEFAULTS.whisperPrompt),
+      endpoint: _GM_getValue("endpoint", DEFAULTS.endpoint),
+      temperature: _GM_getValue("temperature", DEFAULTS.temperature),
       autoSubmit: _GM_getValue("autoSubmit", DEFAULTS.autoSubmit)
     };
   }
@@ -108,6 +112,8 @@
     _GM_registerMenuCommand("Set Whisper Model", callbacks.onSetModel);
     _GM_registerMenuCommand("Set Language", callbacks.onSetLanguage);
     _GM_registerMenuCommand("Set Whisper Prompt", callbacks.onSetPrompt);
+    _GM_registerMenuCommand("Set STT Endpoint", callbacks.onSetEndpoint);
+    _GM_registerMenuCommand("Set Temperature", callbacks.onSetTemperature);
   }
   const PROMPT_INPUT_SELECTOR = '[data-component="prompt-input"]';
   const SUBMIT_SELECTOR = '[data-action="prompt-submit"]';
@@ -195,12 +201,12 @@
       document.removeEventListener("keydown", handler);
     };
   }
-  const GROQ_API_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
   function buildFormData(audioBlob, config) {
     const formData = new FormData();
     formData.append("file", audioBlob, "audio.webm");
     formData.append("model", config.model);
     formData.append("response_format", "text");
+    formData.append("temperature", String(config.temperature));
     if (config.language) {
       formData.append("language", config.language);
     }
@@ -240,7 +246,7 @@
       const formData = buildFormData(audioBlob, config);
       _GM_xmlhttpRequest({
         method: "POST",
-        url: GROQ_API_URL,
+        url: config.endpoint,
         headers: {
           Authorization: `Bearer ${config.groqApiKey}`
         },
@@ -579,6 +585,7 @@
       toast: showToast
     };
   }
+  const DEFAULTS_ENDPOINT = DEFAULTS.endpoint;
   let recorder = null;
   let currentState = "idle";
   let timerInterval = null;
@@ -700,6 +707,32 @@
       ui == null ? void 0 : ui.toast("Whisper prompt updated");
     }
   }
+  function promptForEndpoint() {
+    const current = getConfig().endpoint;
+    const url = prompt("STT endpoint URL:", current);
+    if (url === null) {
+      return;
+    }
+    const trimmed = url.trim();
+    const value = trimmed || DEFAULTS_ENDPOINT;
+    setConfig({ endpoint: value });
+    ui == null ? void 0 : ui.toast(`Endpoint set to ${value}`);
+  }
+  function promptForTemperature() {
+    const current = getConfig().temperature;
+    const input = prompt("Temperature (0-1):", String(current));
+    if (input === null) {
+      return;
+    }
+    const parsed = Number(input);
+    if (Number.isNaN(parsed)) {
+      ui == null ? void 0 : ui.toast("Invalid temperature", true);
+      return;
+    }
+    const clamped = Math.min(1, Math.max(0, parsed));
+    setConfig({ temperature: clamped });
+    ui == null ? void 0 : ui.toast(`Temperature set to ${clamped}`);
+  }
   function toggleAutoSubmit() {
     const config = getConfig();
     setConfig({ autoSubmit: !config.autoSubmit });
@@ -735,7 +768,9 @@
       onToggleAutoSubmit: toggleAutoSubmit,
       onSetModel: promptForModel,
       onSetLanguage: promptForLanguage,
-      onSetPrompt: promptForWhisperPrompt
+      onSetPrompt: promptForWhisperPrompt,
+      onSetEndpoint: promptForEndpoint,
+      onSetTemperature: promptForTemperature
     });
     checkFirstRun();
   }

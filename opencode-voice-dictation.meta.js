@@ -8,7 +8,7 @@
 // @downloadURL  https://raw.githubusercontent.com/slaid098/opencode-voice-dictation/dist/opencode-voice-dictation.user.js
 // @updateURL    https://raw.githubusercontent.com/slaid098/opencode-voice-dictation/dist/opencode-voice-dictation.meta.js
 // @match        *://*/*
-// @connect      api.groq.com
+// @connect      *
 // @grant        GM_getValue
 // @grant        GM_registerMenuCommand
 // @grant        GM_setValue
