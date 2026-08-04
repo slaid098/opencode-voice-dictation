@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenCode Voice Dictation
 // @namespace    https://github.com/slaid098/opencode-voice-dictation
-// @version      1.0.4
+// @version      1.0.5
 // @author       slaid098
 // @description  Voice dictation for OpenCode web using Whisper (Groq API) - works on PC and mobile
 // @icon         https://raw.githubusercontent.com/slaid098/opencode-voice-dictation/main/assets/icon.png
@@ -79,7 +79,7 @@
     groqApiKey: "",
     model: "whisper-large-v3",
     language: "",
-    whisperPrompt: "opencode, voice, dictation, transcribe, command, terminal, commit, branch, pull, push, merge, issue, prompt",
+    whisperPrompt: "",
     endpoint: "https://api.groq.com/openai/v1/audio/transcriptions",
     temperature: 0,
     autoSubmit: false
