@@ -1,0 +1,779 @@
+// ==UserScript==
+// @name         OpenCode Voice Dictation
+// @namespace    https://github.com/slaid098/opencode-voice-dictation
+// @version      1.0.7
+// @author       slaid098
+// @description  Voice dictation for OpenCode web using Whisper (Groq API) - works on PC and mobile
+// @icon         https://git.slaid098.dev/slaid098/opencode-voice-dictation/raw/branch/main/assets/icon.png
+// @downloadURL  https://git.slaid098.dev/slaid098/opencode-voice-dictation/raw/branch/dist/opencode-voice-dictation.user.js
+// @updateURL    https://git.slaid098.dev/slaid098/opencode-voice-dictation/raw/branch/dist/opencode-voice-dictation.meta.js
+// @match        *://*/*
+// @connect      *
+// @grant        GM_getValue
+// @grant        GM_registerMenuCommand
+// @grant        GM_setValue
+// @grant        GM_xmlhttpRequest
+// @run-at       document-idle
+// ==/UserScript==
+
+(function () {
+  'use strict';
+
+  function createAudioRecorder() {
+    let mediaRecorder = null;
+    let chunks = [];
+    let stream = null;
+    let recording = false;
+    return {
+      async start() {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+        chunks = [];
+        const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm";
+        mediaRecorder = new MediaRecorder(stream, {
+          audioBitsPerSecond: 128e3,
+          mimeType
+        });
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            chunks.push(event.data);
+          }
+        };
+        mediaRecorder.start();
+        recording = true;
+      },
+      stop() {
+        return new Promise((resolve) => {
+          if (!mediaRecorder) {
+            resolve(new Blob());
+            return;
+          }
+          mediaRecorder.onstop = () => {
+            const blob = new Blob(chunks, { type: "audio/webm" });
+            if (stream) {
+              for (const track of stream.getTracks()) {
+                track.stop();
+              }
+            }
+            recording = false;
+            resolve(blob);
+          };
+          mediaRecorder.stop();
+        });
+      },
+      isRecording() {
+        return recording;
+      }
+    };
+  }
+  var _GM_getValue = /* @__PURE__ */ (() => typeof GM_getValue != "undefined" ? GM_getValue : void 0)();
+  var _GM_registerMenuCommand = /* @__PURE__ */ (() => typeof GM_registerMenuCommand != "undefined" ? GM_registerMenuCommand : void 0)();
+  var _GM_setValue = /* @__PURE__ */ (() => typeof GM_setValue != "undefined" ? GM_setValue : void 0)();
+  var _GM_xmlhttpRequest = /* @__PURE__ */ (() => typeof GM_xmlhttpRequest != "undefined" ? GM_xmlhttpRequest : void 0)();
+  const DEFAULTS = {
+    groqApiKey: "",
+    model: "whisper-large-v3",
+    language: "",
+    whisperPrompt: "",
+    endpoint: "https://api.groq.com/openai/v1/audio/transcriptions",
+    temperature: 0,
+    autoSubmit: false
+  };
+  function getConfig() {
+    return {
+      groqApiKey: _GM_getValue("groqApiKey", DEFAULTS.groqApiKey),
+      model: _GM_getValue("model", DEFAULTS.model),
+      language: _GM_getValue("language", DEFAULTS.language),
+      whisperPrompt: _GM_getValue("whisperPrompt", DEFAULTS.whisperPrompt),
+      endpoint: _GM_getValue("endpoint", DEFAULTS.endpoint),
+      temperature: _GM_getValue("temperature", DEFAULTS.temperature),
+      autoSubmit: _GM_getValue("autoSubmit", DEFAULTS.autoSubmit)
+    };
+  }
+  function setConfig(partial) {
+    for (const [key, value] of Object.entries(partial)) {
+      _GM_setValue(key, value);
+    }
+  }
+  function validateApiKey(key) {
+    return key.startsWith("gsk_") && key.length > 20;
+  }
+  function isFirstRun() {
+    return _GM_getValue("groqApiKey", "") === "";
+  }
+  function registerMenuCommands(callbacks) {
+    _GM_registerMenuCommand("Set Groq API Key", callbacks.onSetKey);
+    _GM_registerMenuCommand("Toggle Auto-Submit", callbacks.onToggleAutoSubmit);
+    _GM_registerMenuCommand("Set Whisper Model", callbacks.onSetModel);
+    _GM_registerMenuCommand("Set Language", callbacks.onSetLanguage);
+    _GM_registerMenuCommand("Set Whisper Prompt", callbacks.onSetPrompt);
+    _GM_registerMenuCommand("Set STT Endpoint", callbacks.onSetEndpoint);
+    _GM_registerMenuCommand("Set Temperature", callbacks.onSetTemperature);
+  }
+  const PROMPT_INPUT_SELECTOR = '[data-component="prompt-input"]';
+  const SUBMIT_SELECTOR = '[data-action="prompt-submit"]';
+  const QUESTION_INPUT_SELECTOR$1 = '[data-slot="question-custom-input"]';
+  const PAGE_DETECT_SELECTORS = [
+    '[data-component="prompt-input"]',
+    '[data-component="prompt-input-v2"]',
+    '[data-component="session-prompt-dock"]',
+    '[data-component="session-composer"]',
+    '[data-component="session-new-composer"]',
+    '[data-slot="question-custom-input"]'
+  ];
+  function isOpencodePage() {
+    return PAGE_DETECT_SELECTORS.some((s) => document.querySelector(s) !== null);
+  }
+  function isQuestionPromptOpen() {
+    return document.querySelector(QUESTION_INPUT_SELECTOR$1) !== null;
+  }
+  function insertText(text, target = "composer") {
+    if (target === "question") {
+      return insertIntoTextarea(text);
+    }
+    return insertIntoContenteditable(text);
+  }
+  function insertIntoContenteditable(text) {
+    const input = document.querySelector(PROMPT_INPUT_SELECTOR);
+    if (!input) {
+      return false;
+    }
+    input.focus();
+    const selection = window.getSelection();
+    if (selection) {
+      selection.selectAllChildren(input);
+      selection.collapseToEnd();
+    }
+    document.execCommand("insertText", false, text);
+    input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    return true;
+  }
+  function insertIntoTextarea(text) {
+    const textarea = document.querySelector(QUESTION_INPUT_SELECTOR$1);
+    if (!textarea) {
+      return false;
+    }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const newValue = textarea.value.substring(0, start) + text + textarea.value.substring(end);
+    textarea.value = newValue;
+    textarea.selectionStart = textarea.selectionEnd = start + text.length;
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    textarea.focus();
+    return true;
+  }
+  function submitPrompt() {
+    const submitButton = document.querySelector(SUBMIT_SELECTOR);
+    if (!submitButton) {
+      return false;
+    }
+    submitButton.click();
+    return true;
+  }
+  const KEY_ALIASES = {
+    space: " ",
+    enter: "enter",
+    tab: "tab",
+    esc: "escape",
+    escape: "escape"
+  };
+  function normalizeKey(key) {
+    return KEY_ALIASES[key] ?? key;
+  }
+  function setupKeyboardShortcut(callback, combo = "ctrl+space") {
+    const parts = combo.toLowerCase().split("+");
+    const key = normalizeKey(parts[parts.length - 1]);
+    const needsCtrl = parts.includes("ctrl");
+    const needsShift = parts.includes("shift");
+    const handler = (e) => {
+      if (e.key.toLowerCase() === key && e.ctrlKey === needsCtrl && e.shiftKey === needsShift) {
+        e.preventDefault();
+        callback();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => {
+      document.removeEventListener("keydown", handler);
+    };
+  }
+  function buildFormData(audioBlob, config) {
+    const formData = new FormData();
+    formData.append("file", audioBlob, "audio.webm");
+    formData.append("model", config.model);
+    formData.append("response_format", "text");
+    formData.append("temperature", String(config.temperature));
+    if (config.language) {
+      formData.append("language", config.language);
+    }
+    if (config.whisperPrompt) {
+      formData.append("prompt", config.whisperPrompt);
+    }
+    return formData;
+  }
+  function parseErrorResponse(status, body) {
+    var _a;
+    if (status === 401) {
+      return "Invalid API key. Check your Groq API key in settings.";
+    }
+    if (status === 429) {
+      return "Rate limit exceeded. Please wait and try again.";
+    }
+    if (status >= 500) {
+      return "Groq server error. Please try again later.";
+    }
+    try {
+      const error = JSON.parse(body);
+      return ((_a = error == null ? void 0 : error.error) == null ? void 0 : _a.message) ?? `Error ${status}`;
+    } catch {
+      return `Error ${status}: ${body}`;
+    }
+  }
+  function transcribe(audioBlob, config) {
+    return new Promise((resolve, reject) => {
+      if (!config.groqApiKey) {
+        reject(new Error("Groq API key not set. Use the Tampermonkey/Violentmonkey menu to set it."));
+        return;
+      }
+      if (audioBlob.size === 0) {
+        reject(new Error("No audio recorded. Please try again."));
+        return;
+      }
+      const formData = buildFormData(audioBlob, config);
+      _GM_xmlhttpRequest({
+        method: "POST",
+        url: config.endpoint,
+        headers: {
+          Authorization: `Bearer ${config.groqApiKey}`
+        },
+        data: formData,
+        onload: (response) => {
+          if (response.status === 200) {
+            resolve({ text: response.responseText.trim() });
+          } else {
+            reject(new Error(parseErrorResponse(response.status, response.responseText)));
+          }
+        },
+        onerror: () => {
+          reject(new Error("Network error: could not reach Groq API"));
+        },
+        ontimeout: () => {
+          reject(new Error("Request timeout: Groq API did not respond"));
+        }
+      });
+    });
+  }
+  const BUTTON_CLASS = "ocvd-btn";
+  const CONTAINER_CLASS = "ocvd-container";
+  const TIMER_CLASS = "ocvd-timer";
+  const CANCEL_CLASS = "ocvd-cancel";
+  const COMPOSER_SELECTORS = [
+    '[data-component="prompt-input-v2"]',
+    '[data-component="session-prompt-dock"]',
+    '[data-component="session-new-composer"]',
+    '[data-component="session-composer"]'
+  ];
+  const QUESTION_INPUT_SELECTOR = '[data-slot="question-custom-input"]';
+  const ICON_MIC = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>`;
+  const ICON_STOP = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="3"/></svg>`;
+  const ICON_CANCEL = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18.3 5.71L12 12l6.3 6.29-1.42 1.42L10.58 13.4 4.29 19.71 2.87 18.3 9.16 12 2.87 5.71 4.29 4.29 10.58 10.58l6.29-6.29z"/></svg>`;
+  const ICON_SPINNER = `<svg class="ocvd-spin" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 4V1L16 5l-4 4V6c-3.31 0-6 2.69-6 6 0 1.01.25 1.97.7 2.8L5.24 16.26C4.46 15.03 4 13.57 4 12c0-4.42 3.58-8 8-8z"/></svg>`;
+  function createButtonStyle() {
+    return `
+    .${CONTAINER_CLASS} {
+      position: absolute !important;
+      top: 8px;
+      right: 8px;
+      z-index: 999998;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      pointer-events: none;
+    }
+    .${CONTAINER_CLASS} > * {
+      pointer-events: auto;
+    }
+    .${BUTTON_CLASS} {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: var(--color-bg-tertiary, rgba(128, 128, 128, 0.15));
+      color: var(--color-text-secondary, #888);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      padding: 0;
+      flex-shrink: 0;
+    }
+    .${BUTTON_CLASS}:hover {
+      background: var(--color-bg-hover, rgba(128, 128, 128, 0.25));
+      color: var(--color-text-primary, #fff);
+    }
+    .${BUTTON_CLASS}.recording {
+      background: #e53935;
+      color: #fff;
+      animation: ocvd-pulse 1.5s ease-in-out infinite;
+    }
+    .${BUTTON_CLASS}.processing {
+      background: var(--color-accent, #4a9eff);
+      color: #fff;
+      pointer-events: none;
+      opacity: 0.8;
+    }
+    .${CANCEL_CLASS} {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(128, 128, 128, 0.5);
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      padding: 0;
+      flex-shrink: 0;
+    }
+    .${CANCEL_CLASS}:hover {
+      background: rgba(128, 128, 128, 0.7);
+      color: #fff;
+    }
+    .${CANCEL_CLASS}.visible {
+      display: flex;
+    }
+    .${TIMER_CLASS} {
+      display: none;
+      font-family: monospace;
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      background: #e53935;
+      padding: 4px 10px;
+      border-radius: 12px;
+      align-items: center;
+      gap: 5px;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .${TIMER_CLASS}.visible {
+      display: inline-flex;
+    }
+    .${TIMER_CLASS}::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      background: #fff;
+      border-radius: 50%;
+      animation: ocvd-blink 1s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+    @keyframes ocvd-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0.4); }
+      50% { box-shadow: 0 0 0 6px rgba(229, 57, 53, 0); }
+    }
+    @keyframes ocvd-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    @keyframes ocvd-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .ocvd-spin {
+      animation: ocvd-spin 0.8s linear infinite;
+      transform-origin: center;
+    }
+    #opencode-voice-toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1a1a1a;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: -apple-system, sans-serif;
+      z-index: 999999;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      max-width: 90vw;
+      text-align: center;
+    }
+    #opencode-voice-toast.visible {
+      opacity: 1;
+    }
+    #opencode-voice-toast.error {
+      background: #e53935;
+    }
+  `;
+  }
+  function injectStyles() {
+    if (document.getElementById("opencode-voice-dictation-style")) {
+      return;
+    }
+    const style = document.createElement("style");
+    style.id = "opencode-voice-dictation-style";
+    style.textContent = createButtonStyle();
+    document.head.appendChild(style);
+  }
+  function showToast(message, isError = false) {
+    let toast = document.getElementById("opencode-voice-toast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "opencode-voice-toast";
+      document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.className = isError ? "visible error" : "visible";
+    setTimeout(() => {
+      toast.className = "";
+    }, 4e3);
+  }
+  function formatTimer(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }
+  function createContainer() {
+    const container = document.createElement("div");
+    container.className = CONTAINER_CLASS;
+    const cancel = document.createElement("button");
+    cancel.className = CANCEL_CLASS;
+    cancel.type = "button";
+    cancel.title = "Cancel recording";
+    cancel.innerHTML = ICON_CANCEL;
+    const timer = document.createElement("span");
+    timer.className = TIMER_CLASS;
+    timer.textContent = "00:00";
+    const button = document.createElement("button");
+    button.className = BUTTON_CLASS;
+    button.type = "button";
+    button.title = "Voice Dictation (Ctrl+Space)";
+    button.innerHTML = ICON_MIC;
+    container.appendChild(cancel);
+    container.appendChild(timer);
+    container.appendChild(button);
+    return container;
+  }
+  function updateAllButtonStates(state, elapsedSeconds2 = 0) {
+    const containers = document.querySelectorAll(`.${CONTAINER_CLASS}`);
+    for (const container of containers) {
+      const button = container.querySelector(`.${BUTTON_CLASS}`);
+      const timer = container.querySelector(`.${TIMER_CLASS}`);
+      const cancel = container.querySelector(`.${CANCEL_CLASS}`);
+      if (!button || !timer || !cancel) continue;
+      button.classList.remove("recording", "processing");
+      timer.classList.remove("visible");
+      cancel.classList.remove("visible");
+      switch (state) {
+        case "idle":
+          button.innerHTML = ICON_MIC;
+          button.title = "Voice Dictation (Ctrl+Space)";
+          break;
+        case "recording":
+          button.classList.add("recording");
+          button.innerHTML = ICON_STOP;
+          button.title = "Stop recording";
+          timer.textContent = formatTimer(elapsedSeconds2);
+          timer.classList.add("visible");
+          cancel.classList.add("visible");
+          break;
+        case "processing":
+          button.classList.add("processing");
+          button.innerHTML = ICON_SPINNER;
+          button.title = "Transcribing...";
+          break;
+      }
+    }
+  }
+  function findComposer() {
+    for (const selector of COMPOSER_SELECTORS) {
+      const el = document.querySelector(selector);
+      if (el) {
+        if (el.getAttribute("data-component") === "session-prompt-dock" && el.querySelector('[data-component="session-question-dock"]')) {
+          continue;
+        }
+        if (el.getAttribute("data-component") === "session-prompt-dock" && !el.querySelector('[data-component="prompt-input"], [data-component="prompt-input-v2"]')) {
+          continue;
+        }
+        console.log(`[ocvd] Composer found via ${selector}`);
+        return el;
+      }
+    }
+    console.log("[ocvd] No composer found in DOM");
+    return null;
+  }
+  function ensureRelative(el) {
+    if (window.getComputedStyle(el).position === "static") {
+      el.style.position = "relative";
+    }
+  }
+  function injectIntoElement(parent, onToggle, onCancel, target) {
+    const existing = parent.querySelector(`.${CONTAINER_CLASS}`);
+    if (existing) {
+      return null;
+    }
+    injectStyles();
+    ensureRelative(parent);
+    const container = createContainer();
+    const button = container.querySelector(`.${BUTTON_CLASS}`);
+    button.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onToggle(target);
+    });
+    const cancel = container.querySelector(`.${CANCEL_CLASS}`);
+    cancel.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onCancel();
+    });
+    parent.appendChild(container);
+    return container;
+  }
+  function injectIntoComposer(onToggle, onCancel) {
+    if (document.querySelector('[data-slot="question-custom-input"]')) {
+      return;
+    }
+    if (!document.querySelector('[data-component="prompt-input"], [data-component="prompt-input-v2"]')) {
+      return;
+    }
+    const composer = findComposer();
+    if (composer) {
+      injectIntoElement(composer, onToggle, onCancel, "composer");
+      console.log("[ocvd] Mic button injected into composer");
+    }
+  }
+  function injectIntoQuestionPrompts(onToggle, onCancel) {
+    const textareas = document.querySelectorAll(QUESTION_INPUT_SELECTOR);
+    for (const textarea of textareas) {
+      const parent = textarea.parentElement;
+      if (parent) {
+        injectIntoElement(parent, onToggle, onCancel, "question");
+      }
+    }
+  }
+  function setupUI(callbacks) {
+    const observer = new MutationObserver(() => {
+      injectIntoComposer(callbacks.onToggle, callbacks.onCancel);
+      injectIntoQuestionPrompts(callbacks.onToggle, callbacks.onCancel);
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+    injectIntoComposer(callbacks.onToggle, callbacks.onCancel);
+    injectIntoQuestionPrompts(callbacks.onToggle, callbacks.onCancel);
+    return {
+      inject: () => {
+        injectIntoComposer(callbacks.onToggle, callbacks.onCancel);
+        injectIntoQuestionPrompts(callbacks.onToggle, callbacks.onCancel);
+      },
+      updateState: (state, elapsedSeconds2 = 0) => {
+        updateAllButtonStates(state, elapsedSeconds2);
+      },
+      toast: showToast
+    };
+  }
+  const DEFAULTS_ENDPOINT = DEFAULTS.endpoint;
+  let recorder = null;
+  let currentState = "idle";
+  let timerInterval = null;
+  let elapsedSeconds = 0;
+  let ui = null;
+  let currentTarget = "composer";
+  function startTimer() {
+    elapsedSeconds = 0;
+    timerInterval = setInterval(() => {
+      elapsedSeconds++;
+      ui == null ? void 0 : ui.updateState(currentState, elapsedSeconds);
+    }, 1e3);
+  }
+  function stopTimer() {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  }
+  async function toggleDictation(target) {
+    if (currentState === "idle") {
+      currentTarget = target;
+      await startRecording();
+    } else if (currentState === "recording") {
+      await stopAndTranscribe();
+    }
+  }
+  async function startRecording() {
+    try {
+      recorder = createAudioRecorder();
+      await recorder.start();
+      currentState = "recording";
+      startTimer();
+      ui == null ? void 0 : ui.updateState(currentState, elapsedSeconds);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to access microphone";
+      ui == null ? void 0 : ui.toast(message, true);
+      recorder = null;
+    }
+  }
+  async function stopAndTranscribe() {
+    if (!recorder) {
+      return;
+    }
+    stopTimer();
+    currentState = "processing";
+    ui == null ? void 0 : ui.updateState(currentState);
+    try {
+      const audioBlob = await recorder.stop();
+      const config = getConfig();
+      const result = await transcribe(audioBlob, config);
+      if (result.text) {
+        const inserted = insertText(result.text, currentTarget);
+        if (!inserted) {
+          ui == null ? void 0 : ui.toast("Could not find input field", true);
+        } else if (config.autoSubmit && currentTarget === "composer") {
+          submitPrompt();
+        }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Transcription failed";
+      ui == null ? void 0 : ui.toast(message, true);
+    } finally {
+      currentState = "idle";
+      elapsedSeconds = 0;
+      recorder = null;
+      ui == null ? void 0 : ui.updateState(currentState);
+    }
+  }
+  async function cancelRecording() {
+    if (currentState !== "recording" || !recorder) {
+      return;
+    }
+    stopTimer();
+    try {
+      await recorder.stop();
+    } catch {
+    }
+    currentState = "idle";
+    elapsedSeconds = 0;
+    recorder = null;
+    ui == null ? void 0 : ui.updateState(currentState);
+  }
+  function promptForApiKey() {
+    const key = prompt("Enter your Groq API key (get one free at console.groq.com/keys):", "");
+    if (key && validateApiKey(key)) {
+      setConfig({ groqApiKey: key.trim() });
+      ui == null ? void 0 : ui.toast("API key saved!");
+    } else if (key) {
+      ui == null ? void 0 : ui.toast("Invalid key format. Must start with 'gsk_'", true);
+    }
+  }
+  function promptForModel() {
+    const model = prompt(
+      "Whisper model (whisper-large-v3 or whisper-large-v3-turbo):",
+      getConfig().model
+    );
+    if (model && (model === "whisper-large-v3" || model === "whisper-large-v3-turbo")) {
+      setConfig({ model });
+      ui == null ? void 0 : ui.toast(`Model set to ${model}`);
+    } else if (model) {
+      ui == null ? void 0 : ui.toast("Invalid model name", true);
+    }
+  }
+  function promptForLanguage() {
+    const lang = prompt(
+      "Language code (empty for auto-detect, e.g. 'ru', 'en'):",
+      getConfig().language
+    );
+    if (lang !== null) {
+      setConfig({ language: lang.trim() });
+      ui == null ? void 0 : ui.toast(lang.trim() ? `Language set to ${lang}` : "Auto-detect enabled");
+    }
+  }
+  function promptForWhisperPrompt() {
+    const text = prompt("Whisper prompt (context for transcription):", getConfig().whisperPrompt);
+    if (text !== null) {
+      setConfig({ whisperPrompt: text });
+      ui == null ? void 0 : ui.toast("Whisper prompt updated");
+    }
+  }
+  function promptForEndpoint() {
+    const current = getConfig().endpoint;
+    const url = prompt("STT endpoint URL:", current);
+    if (url === null) {
+      return;
+    }
+    const trimmed = url.trim();
+    const value = trimmed || DEFAULTS_ENDPOINT;
+    setConfig({ endpoint: value });
+    ui == null ? void 0 : ui.toast(`Endpoint set to ${value}`);
+  }
+  function promptForTemperature() {
+    const current = getConfig().temperature;
+    const input = prompt("Temperature (0-1):", String(current));
+    if (input === null) {
+      return;
+    }
+    const parsed = Number(input);
+    if (Number.isNaN(parsed)) {
+      ui == null ? void 0 : ui.toast("Invalid temperature", true);
+      return;
+    }
+    const clamped = Math.min(1, Math.max(0, parsed));
+    setConfig({ temperature: clamped });
+    ui == null ? void 0 : ui.toast(`Temperature set to ${clamped}`);
+  }
+  function toggleAutoSubmit() {
+    const config = getConfig();
+    setConfig({ autoSubmit: !config.autoSubmit });
+    ui == null ? void 0 : ui.toast(`Auto-submit ${!config.autoSubmit ? "enabled" : "disabled"}`);
+  }
+  function checkFirstRun() {
+    if (isFirstRun()) {
+      setTimeout(() => {
+        ui == null ? void 0 : ui.toast("First run: Set your Groq API key via the Violentmonkey/Tampermonkey menu");
+      }, 2e3);
+    }
+  }
+  function init() {
+    if (!isOpencodePage()) {
+      console.log("[ocvd] OpenCode page not detected, retrying in 1.5s...");
+      setTimeout(init, 1500);
+      return;
+    }
+    console.log("[ocvd] OpenCode page detected, setting up UI");
+    ui = setupUI({
+      onToggle: (target) => {
+        void toggleDictation(target);
+      },
+      onCancel: () => {
+        void cancelRecording();
+      }
+    });
+    setupKeyboardShortcut(() => {
+      void toggleDictation(isQuestionPromptOpen() ? "question" : "composer");
+    });
+    checkFirstRun();
+  }
+  registerMenuCommands({
+    onSetKey: promptForApiKey,
+    onToggleAutoSubmit: toggleAutoSubmit,
+    onSetModel: promptForModel,
+    onSetLanguage: promptForLanguage,
+    onSetPrompt: promptForWhisperPrompt,
+    onSetEndpoint: promptForEndpoint,
+    onSetTemperature: promptForTemperature
+  });
+  init();
+
+})();
